@@ -13,6 +13,7 @@ type CtrUsr struct {
 	Addr     string    `json:"address"`
 	Dob      time.Time `json:"dob"`
 	MblNo    string    `json:"mobile_no"`
+	Rnk      string    `json:"rank"`
 	UsrSts   string    `json:"user_status"`
 	IsFrtIdc bool      `json:"is_frt_idc"`
 }

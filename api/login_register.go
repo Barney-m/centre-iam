@@ -19,13 +19,25 @@ import (
 )
 
 type registerUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	FullNm   string `json:"full_name" schema:"full_name"`
+	Dob      string `json:"dob"`
+	Addr     string `json:"address"`
+	MobileNo string `json:"mobile_no"`
+	Rank     string `json:"rank"`
+}
+
+type registerUserResponse struct {
+	UsrId    uuid.UUID `gorm:"primaryKey" json:"user_id"`
 	Email    string    `json:"email"`
-	Password string    `json:"password"`
 	FullNm   string    `json:"full_name"`
 	Addr     string    `json:"address"`
 	Dob      time.Time `json:"dob"`
-	MobileNo string    `json:"mobile_no"`
-	Rank     string    `json:"rank"`
+	Rnk      string    `json:"rank"`
+	MblNo    string    `json:"mobile_no"`
+	UsrSts   string    `json:"user_status"`
+	IsFrtIdc bool      `json:"is_frt_idc"`
 }
 
 type loginUserRequest struct {
@@ -85,7 +97,7 @@ func HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  http.StatusInternalServerError,
-			"message": "Failed to Login",
+			"message": "Invalid Email / Password",
 		})
 		return
 	}
@@ -180,6 +192,7 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	err = schema.NewDecoder().Decode(&userRequest, r.Form)
 
 	if err != nil {
@@ -203,6 +216,12 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 	DB := server.DB
 
 	newUuid, _ := uuid.NewRandom()
+	print(userRequest.Dob)
+	dob, err := time.Parse("2006-01-02", userRequest.Dob)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	// Set User to be create
 	// Rollback if error
 	user := &model.CtrUsr{
@@ -210,6 +229,7 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 		FullNm: userRequest.FullNm,
 		Email:  userRequest.Email,
 		Addr:   userRequest.Addr,
+		Dob:    dob,
 		MblNo:  userRequest.MobileNo,
 		UsrSts: "A",
 	}
@@ -229,7 +249,7 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 
 		userSecret := &model.CtrUsrSct{
 			UsrId: user.UsrId,
-			Usrnm: userRequest.FullNm,
+			Usrnm: userRequest.Email,
 			Pwd:   hashedPassword,
 			Salt:  salt,
 		}
@@ -249,5 +269,18 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": http.StatusOK,
+		"result": registerUserResponse{
+			UsrId:    user.UsrId,
+			Email:    user.Email,
+			FullNm:   user.FullNm,
+			Addr:     user.Addr,
+			Dob:      dob,
+			MblNo:    user.MblNo,
+			Rnk:      user.Rnk,
+			UsrSts:   user.UsrSts,
+			IsFrtIdc: user.IsFrtIdc,
+		},
+	})
 }

@@ -16,12 +16,12 @@ import (
 )
 
 type renewAccessTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refreshToken"`
 }
 
 type renewAccessTokenResponse struct {
-	AccessToken         string    `json:"access_token"`
-	AccessTokenExpireAt time.Time `json:"access_token_expire_at"`
+	AccessToken         string    `json:"accessToken"`
+	AccessTokenExpireAt time.Time `json:"accessTokenExpireAt"`
 }
 
 type tokenVerificationRequest struct {
@@ -30,7 +30,7 @@ type tokenVerificationRequest struct {
 
 type tokenVerificationResponse struct {
 	Status uint `json:"status"`
-	Valid  bool `json:"is_valid"`
+	Valid  bool `json:"isValid"`
 }
 
 func VerifyToken(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +99,7 @@ func HandleRenewAccessToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var session model.CtrUsrSss
+	var session model.CentreUserSession
 	DB := server.DB
 	err = DB.Last(&session, "email = ? AND id = ?", refreshPayload.Email, refreshPayload.ID).Error
 
@@ -112,25 +112,25 @@ func HandleRenewAccessToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.IsBlck {
-		err = fmt.Errorf("Blocked Session")
+	if session.IsBlock {
+		err = fmt.Errorf("blocked session")
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	if session.Email != refreshPayload.Email {
-		err = fmt.Errorf("Incorrect Session User")
+		err = fmt.Errorf("incorrect session user")
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	if session.RfhTkn != req.RefreshToken {
-		err = fmt.Errorf("Mismatch Session Token")
+	if session.RefreshToken != req.RefreshToken {
+		err = fmt.Errorf("mismatch session token")
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	if time.Now().After(session.ExpAt) {
+	if time.Now().After(session.ExpireAt) {
 		err = fmt.Errorf("Expired Session")
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

@@ -21,23 +21,23 @@ import (
 type registerUserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-	FullNm   string `json:"full_name" schema:"full_name"`
+	FullName string `json:"fullName" schema:"fullName"`
 	Dob      string `json:"dob"`
-	Addr     string `json:"address"`
-	MobileNo string `json:"mobile_no"`
+	Address  string `json:"address"`
+	MobileNo string `json:"mobileNo"`
 	Rank     string `json:"rank"`
 }
 
 type registerUserResponse struct {
-	UsrId    uuid.UUID `gorm:"primaryKey" json:"user_id"`
-	Email    string    `json:"email"`
-	FullNm   string    `json:"full_name"`
-	Addr     string    `json:"address"`
-	Dob      time.Time `json:"dob"`
-	Rnk      string    `json:"rank"`
-	MblNo    string    `json:"mobile_no"`
-	UsrSts   string    `json:"user_status"`
-	IsFrtIdc bool      `json:"is_frt_idc"`
+	UserId         uuid.UUID `gorm:"primaryKey" json:"userId"`
+	Email          string    `json:"email"`
+	FullName       string    `json:"fullName"`
+	Address        string    `json:"address"`
+	Dob            time.Time `json:"dob"`
+	Rank           string    `json:"rank"`
+	MobileNo       string    `json:"mobileNo"`
+	UserStatus     string    `json:"userStatus"`
+	IsFirstTimeIdc bool      `json:"isFirstTimeIdc"`
 }
 
 type loginUserRequest struct {
@@ -46,12 +46,12 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	SessionId            uuid.UUID     `json:"session_id"`
-	AccessToken          string        `json:"access_token"`
-	AccessTokenExpireAt  time.Time     `json:"access_token_expire_at"`
-	RefreshToken         string        `json:"refresh_token"`
-	RefreshTokenExpireAt time.Time     `json:"refresh_token_expire_at"`
-	User                 *model.CtrUsr `json:"user"`
+	SessionId            uuid.UUID         `json:"sessionId"`
+	AccessToken          string            `json:"accessToken"`
+	AccessTokenExpireAt  time.Time         `json:"accessTokenExpireAt"`
+	RefreshToken         string            `json:"refreshToken"`
+	RefreshTokenExpireAt time.Time         `json:"refreshTokenExpireAt"`
+	User                 *model.CentreUser `json:"user"`
 }
 
 func HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
@@ -69,8 +69,8 @@ func HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user model.CtrUsr
-	var userSecret model.CtrUsrSct
+	var user model.CentreUser
+	var userSecret model.CentreUserSecret
 	DB := server.DB
 	err = DB.Last(&user, "email = ?", credentials.Email).Error
 
@@ -89,9 +89,9 @@ func HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	DB.Last(&userSecret, "usr_id = ?", user.UsrId)
+	DB.Last(&userSecret, "user_id = ?", user.UserId)
 
-	isMatch, err := util.VldPassword(credentials.Password, userSecret.Pwd)
+	isMatch, err := util.VldPassword(credentials.Password, userSecret.Password)
 
 	if err != nil || !isMatch {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -142,13 +142,13 @@ func HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 			xForward = r.RemoteAddr
 		}
 
-		userSession := &model.CtrUsrSss{
-			SssId:  refreshPayload.ID,
-			Email:  user.Email,
-			RfhTkn: refreshToken,
-			UsrAgt: r.UserAgent(),
-			CltIp:  xForward,
-			ExpAt:  refreshPayload.ExpiredAt,
+		userSession := &model.CentreUserSession{
+			SessionId:    refreshPayload.ID,
+			Email:        user.Email,
+			RefreshToken: refreshToken,
+			UserAgent:    r.UserAgent(),
+			ClientIp:     xForward,
+			ExpireAt:     refreshPayload.ExpiredAt,
 		}
 
 		if err := tx.Create(&userSession).Error; err != nil {
@@ -216,22 +216,26 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 	DB := server.DB
 
 	newUuid, _ := uuid.NewRandom()
-	print(userRequest.Dob)
-	dob, err := time.Parse("2006-01-02", userRequest.Dob)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	var dob time.Time
+	if len(userRequest.Dob) != 0 {
+		dob, err = time.Parse("2006-01-02", userRequest.Dob)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
+
 	// Set User to be create
 	// Rollback if error
-	user := &model.CtrUsr{
-		UsrId:  newUuid,
-		FullNm: userRequest.FullNm,
-		Email:  userRequest.Email,
-		Addr:   userRequest.Addr,
-		Dob:    dob,
-		MblNo:  userRequest.MobileNo,
-		UsrSts: "A",
+	user := &model.CentreUser{
+		UserId:     newUuid,
+		FullName:   userRequest.FullName,
+		Email:      userRequest.Email,
+		Address:    userRequest.Address,
+		Dob:        dob,
+		MobileNo:   userRequest.MobileNo,
+		UserStatus: "A",
 	}
 
 	// Start DB Transaction
@@ -247,11 +251,11 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
-		userSecret := &model.CtrUsrSct{
-			UsrId: user.UsrId,
-			Usrnm: userRequest.Email,
-			Pwd:   hashedPassword,
-			Salt:  salt,
+		userSecret := &model.CentreUserSecret{
+			UserId:   user.UserId,
+			Username: userRequest.Email,
+			Password: hashedPassword,
+			Salt:     salt,
 		}
 
 		if err := tx.Create(&userSecret).Error; err != nil {
@@ -272,15 +276,15 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": http.StatusOK,
 		"result": registerUserResponse{
-			UsrId:    user.UsrId,
-			Email:    user.Email,
-			FullNm:   user.FullNm,
-			Addr:     user.Addr,
-			Dob:      dob,
-			MblNo:    user.MblNo,
-			Rnk:      user.Rnk,
-			UsrSts:   user.UsrSts,
-			IsFrtIdc: user.IsFrtIdc,
+			UserId:         user.UserId,
+			Email:          user.Email,
+			FullName:       user.FullName,
+			Address:        user.Address,
+			Dob:            dob,
+			MobileNo:       user.MobileNo,
+			Rank:           user.Rank,
+			UserStatus:     user.UserStatus,
+			IsFirstTimeIdc: user.IsFirstTimeIdc,
 		},
 	})
 }

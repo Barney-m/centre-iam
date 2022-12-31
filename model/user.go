@@ -6,14 +6,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type CtrUsr struct {
-	UsrId    uuid.UUID `gorm:"primaryKey" json:"-"`
-	Email    string    `json:"email"`
-	FullNm   string    `json:"full_name"`
-	Addr     string    `json:"address"`
-	Dob      time.Time `json:"dob"`
-	MblNo    string    `json:"mobile_no"`
-	Rnk      string    `json:"rank"`
-	UsrSts   string    `json:"user_status"`
-	IsFrtIdc bool      `json:"is_frt_idc"`
+type CentreUser struct {
+	UserId         uuid.UUID `gorm:"primaryKey;column:USER_ID" json:"-"`
+	Email          string    `gorm:"column:EMAIL" json:"email"`
+	FullName       string    `gorm:"column:FULL_NAME" json:"fullName"`
+	Address        string    `gorm:"column:ADDRESS" json:"address"`
+	Dob            time.Time `gorm:"column:DOB" json:"dob"`
+	MobileNo       string    `gorm:"column:MOBILE_NO" json:"mobileNo"`
+	Rank           string    `gorm:"column:RANK" json:"rank"`
+	UserStatus     string    `gorm:"column:USER_STATUS" json:"userStatus"`
+	IsFirstTimeIdc bool      `gorm:"column:IS_FIRST_TIME_IDC" json:"isFirstTimeIdc"`
 }

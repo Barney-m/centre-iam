@@ -3,9 +3,9 @@ package model
 import "time"
 
 type BaseInfo struct {
-	MdfCnt uint      `json:"mdfCnt"`
-	CrtBy  string    `json:"crtBy"`
-	CrtAt  time.Time `json:"crtAt"`
-	UpdBy  string    `json:"updBy"`
-	UpdAt  time.Time `json:"updAt"`
+	Modified  uint      `json:"modified"`
+	CreatedBy string    `json:"createdBy"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedBy string    `json:"updatedBy"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }

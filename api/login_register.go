@@ -229,13 +229,14 @@ func HandleRegisterRequest(w http.ResponseWriter, r *http.Request) {
 	// Set User to be create
 	// Rollback if error
 	user := &model.CentreUser{
-		UserId:     newUuid,
-		FullName:   userRequest.FullName,
-		Email:      userRequest.Email,
-		Address:    userRequest.Address,
-		Dob:        dob,
-		MobileNo:   userRequest.MobileNo,
-		UserStatus: "A",
+		UserId:         newUuid,
+		FullName:       userRequest.FullName,
+		Email:          userRequest.Email,
+		Address:        userRequest.Address,
+		Dob:            dob,
+		MobileNo:       userRequest.MobileNo,
+		UserStatus:     "A",
+		IsFirstTimeIdc: true,
 	}
 
 	// Start DB Transaction
